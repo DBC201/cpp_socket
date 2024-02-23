@@ -9,3 +9,7 @@ add_executable(client src/client.cpp)
 
 target_include_directories(server PUBLIC include)
 target_include_directories(client PUBLIC include)
+
+if(UNIX)
+	link_libraries(pthread)
+endif()
