@@ -93,6 +93,15 @@ namespace cpp_socket
 			return total_size - bytes.size();
 		}
 
+		void update_size_in_bytes() {
+			size_in_bytes = {
+				static_cast<uint8_t>(bytes.size() >> 24),
+				static_cast<uint8_t>((bytes.size() >> 16) & 0x000000FF),
+				static_cast<uint8_t>((bytes.size() >> 8) & 0x000000FF),
+				static_cast<uint8_t>(bytes.size() & 0x000000FF)
+			};
+		}
+
 		void clear() {
 			size_in_bytes.clear();
 			bytes.clear();
@@ -104,23 +113,10 @@ namespace cpp_socket
 		IPV6
 	};
 
-	Packet string_to_packet(std::string s) {
-		Packet p;
-		for (char c: s) {
-			p.bytes.push_back(c);
-		}
-		
-		return p;
-	}
-
-	std::string packet_to_string(Packet p) {
-		return std::string(p.bytes.begin(), p.bytes.end());
-	}
-
 	class Socket
 	{
 	public:
-		Socket(std::string ip, ip_version_t ip_version, int port, bool blocking, uint32_t max_packet_size=8192)
+		Socket(std::string ip, ip_version_t ip_version, int port, bool blocking, int max_packet_size=8192)
 		{
 			this->ip_version = ip_version;
 			this->max_packet_size = max_packet_size;
@@ -237,7 +233,7 @@ namespace cpp_socket
 			}
 		}
 
-		Socket(SOCKET_TYPE m_socket, sockaddr socketAddress, ip_version_t ip_version, bool blocking, uint32_t max_packet_size=8192)
+		Socket(SOCKET_TYPE m_socket, sockaddr socketAddress, ip_version_t ip_version, bool blocking, int max_packet_size=8192)
 		{
 			this->max_packet_size = max_packet_size;
 			this->m_socket = m_socket;
@@ -316,7 +312,10 @@ namespace cpp_socket
 		int receive_packet() {
 			int32_t pending_size = currReceivedPacket.pending_size();
 			
-			if (pending_size == -1) {
+			if (pending_size < -1 || pending_size > max_packet_size) {
+				return -2;
+			}
+			else if (pending_size == -1) {
 				int r = receive_packet_size();
 				if (r < 0) {
 					return -1;
@@ -365,14 +364,9 @@ namespace cpp_socket
 			}
 			currSentPacket = std::move(packet);
 			int32_t data_len = currSentPacket.bytes.size();
-			std::vector<uint8_t> len_in_bytes = {
-				static_cast<uint8_t>(data_len >> 24),
-				static_cast<uint8_t>(data_len >> 16),
-				static_cast<uint8_t>(data_len >> 8),
-				static_cast<uint8_t>(data_len),
-			};
+			currSentPacket.update_size_in_bytes();
 
-			currSentPacket.bytes.insert(currSentPacket.bytes.begin(), len_in_bytes.begin(), len_in_bytes.end());
+			currSentPacket.bytes.insert(currSentPacket.bytes.begin(), currSentPacket.size_in_bytes.begin(), currSentPacket.size_in_bytes.end());
 
 			int len = currSentPacket.bytes.size();
 			int r = send(m_socket, reinterpret_cast<char*>(currSentPacket.bytes.data()), len, 0);
@@ -458,7 +452,7 @@ namespace cpp_socket
 			sockaddr_in ipv4;
 			sockaddr_in6 ipv6;
 		} m_sockaddr_in;
-		uint32_t max_packet_size;
+		int max_packet_size;
 		bool blocking;
 		POLLFD_TYPE m_pollfd;
 		Packet currReceivedPacket;
