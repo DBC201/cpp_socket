@@ -77,8 +77,8 @@ namespace cpp_socket::tcp_socket {
 				return -2;
 			}
 
-			int r;
-			while ((r = send_wrapper(reinterpret_cast<char*>(data_send.data()), data_send.size(), 0)) < size) {
+			while (!data_send.empty()) {
+				int r = send_wrapper(reinterpret_cast<char*>(data_send.data()), data_send.size(), 0);
 				if (r == 0) {
 					return 0;
 				}
