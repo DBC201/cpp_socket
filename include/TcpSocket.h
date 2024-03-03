@@ -33,13 +33,18 @@ namespace cpp_socket::tcp_socket {
 		}
 
 		/*
-		- Returns false if there is already pending data, or size is to big. 
-		- To clear pending data, call clear_send().
-		- Max size limit is 2^32-1 bytes.
+		- Returns -2 if size is too big. Max size limit is 2^32-1 bytes.
+		- Returns -1 if there is pending data to be sent. To clear pending data, call clear_send().
+		- Returns 1 if successfull.
 		*/
-		bool set_send_data(std::vector<unsigned char> bytes) {
-			int size = data_send.size();
-			if (size == 0) {
+		int set_send_data(std::vector<unsigned char> bytes) {
+			if (!data_send.empty()) {
+				return -1;
+			}
+			else if (bytes.size() > INT_MAX) {
+				return -2;
+			}
+			else {
 				data_send = bytes;
 				std::vector<unsigned char> size_bytes = {
 					static_cast<unsigned char>(bytes.size() >> 24),
@@ -48,10 +53,8 @@ namespace cpp_socket::tcp_socket {
 					static_cast<unsigned char>(bytes.size() & 0x000000FF)
 				};
 				data_send.insert(data_send.begin(), size_bytes.begin(), size_bytes.end());
-				return true;
+				return 1;
 			}
-
-			return false;
 		}
 
 		/*
