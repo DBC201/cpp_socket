@@ -3,10 +3,6 @@
 
 #include "SocketWrapper.h"
 
-#ifdef __unix__
-	#include <climits>
-#endif
-
 namespace cpp_socket::tcp_socket {
 	class TcpSocket: public SocketWrapper {
 	public:
@@ -45,7 +41,7 @@ namespace cpp_socket::tcp_socket {
 			if (!data_send.empty()) {
 				return -1;
 			}
-			else if (bytes.size() > INT_MAX) {
+			else if (bytes.size() > 0x7fffffff) {
 				return -2;
 			}
 			else {
