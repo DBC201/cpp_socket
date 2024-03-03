@@ -26,8 +26,11 @@
 	#define INVAL_ARGUMENT    WSAEINVAL
 	#define NOTSOCK_ERROR     WSAENOTSOCK
 #else
+	#include <netpacket/packet.h>
 	#include <sys/socket.h>
 	#include <arpa/inet.h>
+	#include <net/if.h>
+	#include <linux/if_ether.h>
 	#include <unistd.h>
 	#include <poll.h>
 	#include <fcntl.h>
@@ -54,7 +57,10 @@ namespace cpp_socket
 	enum address_family_t {
 		IPV4 = AF_INET,
 		IPV6 = AF_INET6,
-		UNSPECIFIED_ADDRESS = AF_UNSPEC
+		UNSPECIFIED = AF_UNSPEC,
+		#ifdef __unix
+			RAW_PACKET = AF_PACKET
+		#endif
 	};
 
 	class Address {
@@ -64,11 +70,12 @@ namespace cpp_socket
 		}
 
 		Address() {
-			this->address_family = UNSPECIFIED_ADDRESS;
+			this->address_family = UNSPECIFIED;
 		}
 
 		Address(sockaddr p_sockaddr, address_family_t address_family) {
 			this->address_family = address_family;
+			m_connect_status = 1;
 			switch (address_family) {
 				case IPV4:
 					m_sockaddr.ipv4 = *(reinterpret_cast<sockaddr_in*>(&p_sockaddr));
@@ -81,17 +88,24 @@ namespace cpp_socket
 			}
 		}
 
-		void set_address(std::string address, int port) {
+		void set_address(std::string address, int filter) {
 			int r = 0;
-			if (address.empty()) {
-				m_is_listener = true;
-			}
 			switch (address_family) {
 				case IPV4:
-					r = set_ipv4_address(m_sockaddr.ipv4, address, port);
+					r = set_ipv4_address(m_sockaddr.ipv4, address, filter);
+					if (address.empty()) {
+						m_connect_status = 0;
+					}
 					break;
 				case IPV6:
-					r = set_ipv6_address(m_sockaddr.ipv6, address, port);
+					r = set_ipv6_address(m_sockaddr.ipv6, address, filter);
+					if (address.empty()) {
+						m_connect_status = 0;
+					}
+					break;
+				case RAW_PACKET:
+					r = set_nic(m_sockaddr.raw, address, filter);
+					m_connect_status = -1;
 					break;
 				default:
 					throw std::runtime_error("Unsupported address family.");
@@ -99,6 +113,13 @@ namespace cpp_socket
 			if (r != 1) {
 				throw std::runtime_error("Error converting address");
 			}
+		}
+
+		static int set_nic(sockaddr_ll& nic, std::string interface, int protocol_filter) {
+			nic.sll_family = AF_PACKET;
+			nic.sll_protocol = htons(protocol_filter);
+			nic.sll_ifindex = if_nametoindex(interface.c_str());
+			return 1;
 		}
 
 		static int set_ipv4_address(sockaddr_in& ipv4, std::string ip, int port) {
@@ -129,8 +150,14 @@ namespace cpp_socket
 			return sizeof(m_sockaddr);
 		}
 
-		bool is_listener() {
-			return m_is_listener;
+		/*
+		- -2 means address is not set
+		- -1 means it can only bind
+		-  0 means it can bind and listen, hence accept
+		-  1 means it can connect
+		*/
+		int connect_status() {
+			return m_connect_status;
 		}
 
 		address_family_t get_address_family() {
@@ -142,8 +169,9 @@ namespace cpp_socket
 		union {
 			sockaddr_in ipv4;
 			sockaddr_in6 ipv6;
+			sockaddr_ll raw;
 		} m_sockaddr;
-		bool m_is_listener = false;
+		int m_connect_status = -2;
 	};
 
 	/*
@@ -226,8 +254,8 @@ namespace cpp_socket
 			#endif
 		}
 		
-		SocketWrapper(address_family_t af, int type, int protocol, Address address, bool blocking) {
-			if ((m_socket = socket(af, type, protocol)) == -1)
+		SocketWrapper(address_family_t address_family, int type, int protocol, Address address, bool blocking) {
+			if ((m_socket = socket(address_family, type, protocol)) == -1)
 			{
 				throw std::runtime_error("Failed to create socket.");
 			}
@@ -252,37 +280,23 @@ namespace cpp_socket
 			}
 
 			this->address = address;
-
-			if (address.is_listener()) {
-				if (bind(m_socket, address.get_sockaddr(), address.size()) == -1)
-				{
-					throw std::runtime_error("Failed to bind.");
-				}
-
-				if (listen(m_socket, 1) == -1)
-				{
-					throw std::runtime_error("Failed to listen.");
-				}
-			}
-			else {
-				if (connect(m_socket, address.get_sockaddr(), address.size()) == -1)
-				{
-					if (!blocking) {
-						// goddamn linux throws EINPROGRESS while windows throws wouldblock
-						#ifdef _WIN32
-						if (WSAGetLastError() != WSAEWOULDBLOCK) {
-							throw std::runtime_error("Failed to connect to server.");
-						}
-						#else
-						if (errno != EINPROGRESS) {
-							throw std::runtime_error("Failed to connect to server.");
-						}
-						#endif
-					}
-					else {
-						throw std::runtime_error("Failed to connect to server.");
-					}
-				}
+			int connect_status = address.connect_status();
+			
+			switch (connect_status) {
+				case -2:
+					throw std::runtime_error("Address initialization is wrong.");
+				case -1:
+					m_bind();
+					break;
+				case 0:
+					m_bind();
+					m_listen();
+					break;
+				case 1:
+					m_connect();
+					break;
+				default:
+					throw std::runtime_error("Unrecognized connect status.");
 			}
 		}
 
@@ -341,6 +355,41 @@ namespace cpp_socket
 		SOCKET_TYPE m_socket;
 		Address address;
 		bool blocking;
+	private:
+		void m_bind() {
+			if (bind(m_socket, address.get_sockaddr(), address.size()) == -1)
+			{
+				throw std::runtime_error("Failed to bind.");
+			}
+		}
+
+		void m_connect() {
+			if (connect(m_socket, address.get_sockaddr(), address.size()) == -1)
+			{
+				if (!blocking) {
+					// goddamn linux throws EINPROGRESS while windows throws wouldblock
+					#ifdef _WIN32
+					if (WSAGetLastError() != WSAEWOULDBLOCK) {
+						throw std::runtime_error("Failed to connect to server.");
+					}
+					#else
+					if (errno != EINPROGRESS) {
+						throw std::runtime_error("Failed to connect to server.");
+					}
+					#endif
+				}
+				else {
+					throw std::runtime_error("Failed to connect to server.");
+				}
+			}
+		}
+
+		void m_listen() {
+			if (listen(m_socket, 1) == -1)
+			{
+				throw std::runtime_error("Failed to listen.");
+			}
+		}
 	};
 } // namespace cpp_socket
 
