@@ -3,6 +3,10 @@
 
 #include "SocketWrapper.h"
 
+#ifdef __unix__
+	#include <climits>
+#endif
+
 namespace cpp_socket::tcp_socket {
 	class TcpSocket: public SocketWrapper {
 	public:
