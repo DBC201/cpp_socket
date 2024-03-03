@@ -1,0 +1,347 @@
+#ifndef SOCKET_WRAPPER_H
+#define SOCKET_WRAPPER_H
+
+#include <iostream>
+#include <vector>
+
+#if !defined(_WIN32) && !defined(__unix__)
+	#warning "Untested platform detected, only unix and windows are tested."
+#endif
+
+#if _WIN32
+	#include <winsock2.h>
+	#include <Ws2tcpip.h>
+	#pragma comment(lib, "ws2_32.lib")
+	#define SOCKET_TYPE SOCKET
+	#define CLOSE_SOCKET closesocket
+	#define POLLFD_TYPE WSAPOLLFD
+	#define POLL WSAPoll
+	typedef int socklen_t;
+
+	#define WOULDBLOCK_ERROR  WSAEWOULDBLOCK
+	#define CONNRESET_ERROR   WSAECONNRESET
+	#define CONNABORTED_ERROR WSAECONNABORTED
+	#define PIPE_ERROR        WSAEPIPE
+	#define INTR_ERROR        WSAEINTR
+	#define INVAL_ARGUMENT    WSAEINVAL
+	#define NOTSOCK_ERROR     WSAENOTSOCK
+#else
+	#include <sys/socket.h>
+	#include <arpa/inet.h>
+	#include <unistd.h>
+	#include <poll.h>
+	#include <fcntl.h>
+	#include <errno.h>
+	#define SOCKET_TYPE int
+	#define CLOSE_SOCKET close
+	#define POLLFD_TYPE pollfd
+	#define POLL poll
+	#define SSIZE_T ssize_t
+	#define SOCKET_ERROR -1
+	#define INVALID_SOCKET -1
+
+	#define WOULDBLOCK_ERROR  EAGAIN
+	#define CONNRESET_ERROR   ECONNRESET
+	#define CONNABORTED_ERROR ECONNABORTED
+	#define PIPE_ERROR        EPIPE
+	#define INTR_ERROR        EINTR
+	#define INVAL_ARGUMENT    EINVAL
+	#define NOTSOCK_ERROR     ENOTSOCK
+#endif
+
+namespace cpp_socket
+{
+	enum address_family_t {
+		IPV4 = AF_INET,
+		IPV6 = AF_INET6,
+		UNSPECIFIED_ADDRESS = AF_UNSPEC
+	};
+
+	class Address {
+	public:
+		Address(address_family_t address_family) {
+			this->address_family = address_family;
+		}
+
+		Address() {
+			this->address_family = UNSPECIFIED_ADDRESS;
+		}
+
+		Address(sockaddr p_sockaddr, address_family_t address_family) {
+			this->address_family = address_family;
+			switch (address_family) {
+				case IPV4:
+					m_sockaddr.ipv4 = *(reinterpret_cast<sockaddr_in*>(&p_sockaddr));
+					break;
+				case IPV6:
+					m_sockaddr.ipv6 = *(reinterpret_cast<sockaddr_in6*>(&p_sockaddr));
+					break;
+				default:
+					throw std::runtime_error("Unsupported address family.");
+			}
+		}
+
+		void set_address(std::string address, int port) {
+			int r = 0;
+			if (address.empty()) {
+				m_is_listener = true;
+			}
+			switch (address_family) {
+				case IPV4:
+					r = set_ipv4_address(m_sockaddr.ipv4, address, port);
+					break;
+				case IPV6:
+					r = set_ipv6_address(m_sockaddr.ipv6, address, port);
+					break;
+				default:
+					throw std::runtime_error("Unsupported address family.");
+			}
+			if (r != 1) {
+				throw std::runtime_error("Error converting address");
+			}
+		}
+
+		static int set_ipv4_address(sockaddr_in& ipv4, std::string ip, int port) {
+			ipv4.sin_family = IPV4;
+			ipv4.sin_port = htons(port);
+			if (ip.empty()) {
+				ipv4.sin_addr.s_addr = INADDR_ANY;
+				return 1;
+			}
+			return inet_pton(IPV4, ip.c_str(), &(ipv4.sin_addr));
+		}
+
+		static int set_ipv6_address(sockaddr_in6& ipv6, std::string ip, int port) {
+			ipv6.sin6_family = IPV6;
+			ipv6.sin6_port = htons(port);
+			if (ip.empty()) {
+				ipv6.sin6_addr = in6addr_any;
+				return 1;
+			}
+			return inet_pton(IPV6, ip.c_str(), &(ipv6.sin6_addr));
+		}
+
+		sockaddr* get_sockaddr() {
+			return reinterpret_cast<sockaddr*>(&m_sockaddr);
+		}
+
+		socklen_t size() {
+			return sizeof(m_sockaddr);
+		}
+
+		bool is_listener() {
+			return m_is_listener;
+		}
+
+		address_family_t get_address_family() {
+			return address_family;
+		}
+
+	private:
+		address_family_t address_family;
+		union {
+			sockaddr_in ipv4;
+			sockaddr_in6 ipv6;
+		} m_sockaddr;
+		bool m_is_listener = false;
+	};
+
+	/*
+	Common Error Codes for Non-blocking Socket Operations:
+
+	- EAGAIN (Linux) / EWOULDBLOCK (Linux and Windows):
+	Indicates that the operation would block because there is no data available to send or receive at the moment.
+
+	- EINTR (Linux) / WSAEINTR (Windows):
+	Indicates that the operation was interrupted by a signal.
+
+	- ECONNRESET (Linux) / WSAECONNRESET (Windows):
+	Indicates that the connection has been reset by the remote peer, often due to a graceful closure.
+
+	- ECONNABORTED (Linux) / WSAECONNABORTED (Windows):
+	Indicates that the connection was aborted by the local system.
+
+	- EPIPE (Linux) / WSAEPIPE (Windows):
+	Indicates that the local end of the socket has been closed, typically when trying to send on a closed socket.
+
+	- EINVAL (Linux) / WSAEINVAL (Windows):
+	Indicates that an invalid argument was provided to the function.
+
+	- ENOTSOCK (Linux) / WSAENOTSOCK (Windows):
+	Indicates that the file descriptor is not a socket.
+
+	- Other platform-specific error codes may apply; refer to platform documentation for details.
+	*/
+	int get_syscall_error() {
+		#if _WIN32
+			return WSAGetLastError();
+		#else
+			return errno;
+		#endif
+	}
+
+	class PollWrapper {
+	public:
+		PollWrapper(SOCKET_TYPE m_socket) {
+			m_pollfd.fd = m_socket;
+			#ifdef _WIN32
+				m_pollfd.events = POLLIN | POLLOUT;
+			#else
+				m_pollfd.events = POLLIN | POLLOUT | POLLERR | POLLHUP | POLLNVAL;
+			#endif
+		}
+
+		/*
+		Monitor the file descriptor for multiple events:
+		- POLLIN: Data available for reading (normal and out-of-band data).
+		- POLLOUT: Ready for writing data.
+		- POLLERR: An error condition has occurred on the file descriptor.
+		- POLLHUP: The other end of the socket has hung up or closed the connection.
+		- POLLNVAL: The file descriptor is not open or is not valid.
+
+		- USAGE: socket->poll_socket() & POLLOUT
+		*/
+		int poll_socket() {
+			int r = POLL(&m_pollfd, 1, 0);
+
+			if (r == SOCKET_ERROR) {
+				throw std::runtime_error("Polling failed.");
+			}
+
+			return m_pollfd.revents;
+		}
+	private:
+		POLLFD_TYPE m_pollfd;
+	};
+
+	class SocketWrapper {
+	public:
+		static void startup() {
+			#ifdef _WIN32
+				WSADATA wsaData;
+				if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+				{
+					throw std::runtime_error("Failed to initialize Winsock.");
+				}
+			#endif
+		}
+		
+		SocketWrapper(address_family_t af, int type, int protocol, Address address, bool blocking) {
+			if ((m_socket = socket(af, type, protocol)) == -1)
+			{
+				throw std::runtime_error("Failed to create socket.");
+			}
+
+			this->blocking = blocking;
+
+			if (!blocking) {
+				#ifdef _WIN32
+				u_long nonBlockingMode = 1;
+				if (ioctlsocket(m_socket, FIONBIO, &nonBlockingMode) == SOCKET_ERROR) {
+					throw std::runtime_error("Failed to set non-blocking mode.");
+				}
+				#else
+					int flags = fcntl(m_socket, F_GETFL, 0);
+					if (flags == -1) {
+						throw std::runtime_error("Failed to get socket flags.");
+					}
+					if (fcntl(m_socket, F_SETFL, flags | O_NONBLOCK) == -1) {
+						throw std::runtime_error("Failed to set non-blocking mode.");
+					}
+				#endif
+			}
+
+			this->address = address;
+
+			if (address.is_listener()) {
+				if (bind(m_socket, address.get_sockaddr(), address.size()) == -1)
+				{
+					throw std::runtime_error("Failed to bind.");
+				}
+
+				if (listen(m_socket, 1) == -1)
+				{
+					throw std::runtime_error("Failed to listen.");
+				}
+			}
+			else {
+				if (connect(m_socket, address.get_sockaddr(), address.size()) == -1)
+				{
+					if (!blocking) {
+						// goddamn linux throws EINPROGRESS while windows throws wouldblock
+						#ifdef _WIN32
+						if (WSAGetLastError() != WSAEWOULDBLOCK) {
+							throw std::runtime_error("Failed to connect to server.");
+						}
+						#else
+						if (errno != EINPROGRESS) {
+							throw std::runtime_error("Failed to connect to server.");
+						}
+						#endif
+					}
+					else {
+						throw std::runtime_error("Failed to connect to server.");
+					}
+				}
+			}
+		}
+
+		SocketWrapper(SOCKET_TYPE m_socket, Address&& address, bool blocking) {
+			this->m_socket = m_socket;
+			this->address = std::move(address);
+			this->blocking = blocking;
+		}
+		
+		SocketWrapper* accept_connection()
+		{
+			SOCKET_TYPE clientSocket;
+			sockaddr client_sockaddr;
+			socklen_t client_sockaddr_size = sizeof(client_sockaddr);
+
+			clientSocket = accept(m_socket, reinterpret_cast<struct sockaddr *>(&client_sockaddr), &client_sockaddr_size);
+
+			if (clientSocket == INVALID_SOCKET) {
+				throw std::runtime_error("Error accepting client.");
+			}
+
+			Address clientAddress(client_sockaddr, address.get_address_family());
+
+			return new SocketWrapper(clientSocket, std::move(clientAddress), blocking);
+		}
+
+		SOCKET_TYPE get_socket() {
+			return m_socket;
+		}
+
+		int send_wrapper(const char *buf, int len, int flags) {
+			return send(m_socket, buf, len, flags);
+		}
+
+		int receive_wrapper(char *buf, int len, int flags) {
+			return recv(m_socket, buf, len, flags);
+		}
+
+		void end()
+		{
+			CLOSE_SOCKET(m_socket);
+		}
+
+		static void cleanup()
+		{
+			#ifdef _WIN32
+				WSACleanup();
+			#endif
+		}
+
+		~SocketWrapper()
+		{
+			end();
+		}
+	protected:
+		SOCKET_TYPE m_socket;
+		Address address;
+		bool blocking;
+	};
+} // namespace cpp_socket
+
+#endif // SOCKET_WRAPPER_H

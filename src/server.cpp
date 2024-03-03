@@ -1,34 +1,30 @@
-#include <Socket.h>
+#include <TcpSocket.h>
 #include <thread>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
 
-using cpp_socket::Socket;
-using cpp_socket::Packet;
-using cpp_socket::ip_version_t::IPV4;
+using cpp_socket::tcp_socket::TcpSocket;
+using cpp_socket::SocketWrapper;
+using cpp_socket::IPV4;
+using cpp_socket::PollWrapper;
 
 constexpr int PORT = 8080;
 std::mutex m;
 std::condition_variable cv;
 
-void print_packet(Packet& packet) {
-	for (const auto& byte: packet.bytes) {
-		std::cout << byte;
-	}
-	std::cout << std::endl;
-}
-
 int main() {
 	try {
-		Socket* serverSocket = new Socket("", IPV4, PORT, false);
-		std::queue<Socket*> clients;
+		SocketWrapper::startup();
+		TcpSocket* serverSocket = new TcpSocket(IPV4, "", PORT, false);
+		PollWrapper pollWrapper(serverSocket->get_socket());
+		std::queue<TcpSocket*> clients;
 
 		std::thread listener([&]() {
 			std::cout << "Listening on port " << PORT << std::endl;
 			while (true) {
-				if (serverSocket->poll_socket() & POLLIN) {
-					Socket* clientSocket = serverSocket->accept_connection();
+				if (pollWrapper.poll_socket() & POLLIN) {
+					TcpSocket* clientSocket = serverSocket->accept_connection();
 
 					if (clientSocket != nullptr) {
 						std::unique_lock lock(m);
@@ -43,7 +39,7 @@ int main() {
 		});
 
 		while (true) {
-			Socket *clientSocket = nullptr;
+			TcpSocket *clientSocket = nullptr;
 			{
 				std::unique_lock lock(m);
 				cv.wait(lock, [&]{return !clients.empty();});
@@ -51,7 +47,7 @@ int main() {
 				clients.pop();
 			}
 
-			int r = clientSocket->receive_packet();
+			int r = clientSocket->receive_data();
 
 			if (r == -2) {
 				std::unique_lock lock(m);
@@ -59,7 +55,7 @@ int main() {
 				clients.push(clientSocket);
 			}
 			else if (r == -1) {
-				int err = clientSocket->get_syscall_error();
+				int err = cpp_socket::get_syscall_error();
 				if (err == WOULDBLOCK_ERROR) {
 					std::unique_lock lock(m);
 					clients.push(clientSocket);
@@ -75,13 +71,12 @@ int main() {
 			}
 			else if (r == 1) {
 				std::unique_lock lock(m);
-				std::vector<Packet> packets = clientSocket->dump_received_packets();
-
-				if (!packets.empty()) {
-					for (auto& packet: packets) {
-						std::cout << "\t";
-						print_packet(packet);
+				std::vector<unsigned char> data = clientSocket->dump_received_data();
+				if (!data.empty()) {
+					for (auto& c: data) {
+						std::cout << c;
 					}
+					std::cout << std::endl;
 				}
 				clients.push(clientSocket);
 			}
@@ -89,9 +84,10 @@ int main() {
 
 	} catch (std::runtime_error& e) {
 		std::cout << e.what() << std::endl;
+		std::cout << "Error code " << cpp_socket::get_syscall_error() << std::endl;
 	}
 	
-	Socket::cleanup();
+	SocketWrapper::cleanup();
 
 	return 0;
 }
