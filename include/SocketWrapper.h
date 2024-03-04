@@ -58,7 +58,7 @@ namespace cpp_socket
 		IPV4 = AF_INET,
 		IPV6 = AF_INET6,
 		UNSPECIFIED = AF_UNSPEC,
-		#ifdef __unix
+		#ifdef __unix__
 			RAW_PACKET = AF_PACKET
 		#endif
 	};
@@ -103,10 +103,12 @@ namespace cpp_socket
 						m_connect_status = 0;
 					}
 					break;
+				#ifdef __unix__
 				case RAW_PACKET:
 					r = set_nic(m_sockaddr.raw, address, filter);
 					m_connect_status = -1;
 					break;
+				#endif
 				default:
 					throw std::runtime_error("Unsupported address family.");
 			}
@@ -115,12 +117,14 @@ namespace cpp_socket
 			}
 		}
 
+		#ifdef __unix__
 		static int set_nic(sockaddr_ll& nic, std::string interface, int protocol_filter) {
 			nic.sll_family = AF_PACKET;
 			nic.sll_protocol = htons(protocol_filter);
 			nic.sll_ifindex = if_nametoindex(interface.c_str());
 			return 1;
 		}
+		#endif
 
 		static int set_ipv4_address(sockaddr_in& ipv4, std::string ip, int port) {
 			ipv4.sin_family = IPV4;
@@ -169,7 +173,9 @@ namespace cpp_socket
 		union {
 			sockaddr_in ipv4;
 			sockaddr_in6 ipv6;
+			#ifdef __unix__
 			sockaddr_ll raw;
+			#endif
 		} m_sockaddr;
 		int m_connect_status = -2;
 	};

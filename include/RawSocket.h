@@ -3,6 +3,10 @@
 
 #include "SocketWrapper.h"
 
+#ifdef _WIN32
+	#error "Windows not supported"
+#endif
+
 namespace cpp_socket::raw_socket {
 	enum protocol_t {
 		PROMISCIOUS = ETH_P_ALL

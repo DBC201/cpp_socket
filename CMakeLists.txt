@@ -9,8 +9,8 @@ include_directories(
 
 add_executable(tcp_server src/tcp/server.cpp)
 add_executable(tcp_client src/tcp/client.cpp)
-add_executable(eth src/eth/main.cpp)
 
 if (UNIX)
+	add_executable(eth src/eth/main.cpp)
 	target_link_libraries(tcp_server pthread)
 endif()
