@@ -1,7 +1,7 @@
 #ifndef TCP_SOCKET_H
 #define TCP_SOCKET_H
 
-#include "SocketWrapper.h"
+#include <base/SocketWrapper.h>
 
 namespace cpp_socket::tcp_socket {
 	class TcpSocket: public SocketWrapper {

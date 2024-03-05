@@ -7,10 +7,10 @@ include_directories(
 	PUBLIC ${CMAKE_SOURCE_DIR}/include
 )
 
-add_executable(tcp_server src/tcp/server.cpp)
-add_executable(tcp_client src/tcp/client.cpp)
+add_executable(tcp_server src/transportlayer/tcp/server.cpp)
+add_executable(tcp_client src/transportlayer/tcp/server.cpp)
 
 if (UNIX)
-	add_executable(eth src/eth/main.cpp)
+	add_executable(eth src/linklayer/eth.cpp)
 	target_link_libraries(tcp_server pthread)
 endif()

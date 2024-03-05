@@ -1,7 +1,7 @@
 #ifndef RAW_SOCKET_H
 #define RAW_SOCKET_H
 
-#include "SocketWrapper.h"
+#include <base/SocketWrapper.h>
 
 #ifdef _WIN32
 	#error "Windows not supported"
@@ -9,13 +9,13 @@
 
 namespace cpp_socket::raw_socket {
 	enum protocol_t {
-		PROMISCIOUS = ETH_P_ALL
+		PROMISCIOUS = ETH_P_ALL,
 	};
 
 	class RawSocket: public SocketWrapper {
 	public:
-		RawSocket(std::string nic, protocol_t filter) 
-			:SocketWrapper(RAW_PACKET, SOCK_RAW, filter, createAddress(nic, filter), false) {
+		RawSocket(std::string nic, protocol_t filter, bool blocking) 
+			:SocketWrapper(RAW_PACKET, SOCK_RAW, filter, createAddress(nic, filter), blocking) {
 
 		}
 	private:
