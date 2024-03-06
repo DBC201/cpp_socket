@@ -1,8 +1,8 @@
 #include <linklayer/RawSocket.h>
 #include <iomanip>
 
-using cpp_socket::raw_socket::RawSocket;
-using cpp_socket::raw_socket::PROMISCIOUS;
+using cpp_socket::linklayer::raw_socket::RawSocket;
+using cpp_socket::linklayer::raw_socket::PROMISCIOUS;
 
 struct EthernetFrame {
 	unsigned char destination_mac[6];
@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
 		EthernetFrame ethernetFrame;
 		int r = rawSocket.receive_wrapper(reinterpret_cast<char*>(&ethernetFrame), sizeof(ethernetFrame), 0);
 		if (r <= 0) {
-			std::cout << "An error occured while reading from socket with code: " << cpp_socket::get_syscall_error() << std::endl;
+			std::cout << "An error occured while reading from socket with code: " << cpp_socket::base::get_syscall_error() << std::endl;
 		}
 		else {
 			std::cout << "Destination mac: ";

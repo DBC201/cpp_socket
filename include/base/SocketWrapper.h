@@ -52,7 +52,7 @@
 	#define NOTSOCK_ERROR     ENOTSOCK
 #endif
 
-namespace cpp_socket
+namespace cpp_socket::base
 {
 	enum address_family_t {
 		IPV4 = AF_INET,

@@ -3,10 +3,10 @@
 #include <thread>
 #include <random>
 
-using cpp_socket::tcp_socket::TcpSocket;
-using cpp_socket::IPV4;
-using cpp_socket::SocketWrapper;
-using cpp_socket::PollWrapper;
+using cpp_socket::transportlayer::tcp_socket::TcpSocket;
+using cpp_socket::transportlayer::IPV4;
+using cpp_socket::base::SocketWrapper;
+using cpp_socket::base::PollWrapper;
 
 const std::string SERVER_IP = "127.0.0.1";
 constexpr int PORT = 8080;

@@ -3,7 +3,7 @@
 
 #include <base/SocketWrapper.h>
 
-namespace cpp_socket::tcp_socket {
+namespace cpp_socket::transportlayer::tcp_socket {
 	class TcpSocket: public SocketWrapper {
 	public:
 		TcpSocket(address_family_t ip_protocol, std::string ip, int port, bool blocking)

@@ -7,7 +7,7 @@
 	#error "Windows not supported"
 #endif
 
-namespace cpp_socket::raw_socket {
+namespace cpp_socket::linklayer::raw_socket {
 	enum protocol_t {
 		PROMISCIOUS = ETH_P_ALL,
 	};

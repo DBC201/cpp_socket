@@ -4,10 +4,10 @@
 #include <mutex>
 #include <condition_variable>
 
-using cpp_socket::tcp_socket::TcpSocket;
-using cpp_socket::SocketWrapper;
-using cpp_socket::IPV4;
-using cpp_socket::PollWrapper;
+using cpp_socket::transportlayer::tcp_socket::TcpSocket;
+using cpp_socket::base::SocketWrapper;
+using cpp_socket::base::IPV4;
+using cpp_socket::base::PollWrapper;
 
 constexpr int PORT = 8080;
 std::mutex m;
