@@ -14,7 +14,7 @@ using cpp_socket::base::Address;
 namespace cpp_socket::linklayer {
 	enum protocol_t {
 		PROMISCIOUS = ETH_P_ALL,
-		IP = ETH_P_IP
+		IPV4_FILTER = ETH_P_IP
 	};
 
 	class RawSocket: public SocketWrapper {
