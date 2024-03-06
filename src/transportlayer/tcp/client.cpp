@@ -3,7 +3,7 @@
 #include <thread>
 #include <random>
 
-using cpp_socket::transportlayer::tcp_socket::TcpSocket;
+using cpp_socket::transportlayer::TcpSocket;
 using cpp_socket::transportlayer::IPV4;
 using cpp_socket::base::SocketWrapper;
 using cpp_socket::base::PollWrapper;

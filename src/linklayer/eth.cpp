@@ -1,8 +1,8 @@
 #include <linklayer/RawSocket.h>
 #include <iomanip>
 
-using cpp_socket::linklayer::raw_socket::RawSocket;
-using cpp_socket::linklayer::raw_socket::PROMISCIOUS;
+using cpp_socket::linklayer::RawSocket;
+using cpp_socket::linklayer::PROMISCIOUS;
 
 struct EthernetFrame {
 	unsigned char destination_mac[6];

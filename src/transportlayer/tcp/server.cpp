@@ -1,10 +1,11 @@
 #include <transportlayer/TcpSocket.h>
+#include <base/PollWrapper.h>
 #include <thread>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
 
-using cpp_socket::transportlayer::tcp_socket::TcpSocket;
+using cpp_socket::transportlayer::TcpSocket;
 using cpp_socket::base::SocketWrapper;
 using cpp_socket::base::IPV4;
 using cpp_socket::base::PollWrapper;

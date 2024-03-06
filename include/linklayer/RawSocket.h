@@ -11,7 +11,7 @@ using cpp_socket::base::Address;
 	#error "Windows not supported"
 #endif
 
-namespace cpp_socket::linklayer::raw_socket {
+namespace cpp_socket::linklayer {
 	enum protocol_t {
 		PROMISCIOUS = ETH_P_ALL,
 	};
@@ -29,6 +29,6 @@ namespace cpp_socket::linklayer::raw_socket {
 			return address;
 		}
 	};
-} // namespace cpp_socket::raw_socket
+} // namespace cpp_socket::linklayer
 
 #endif // RAW_SOCKET_H

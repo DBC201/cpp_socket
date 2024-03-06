@@ -7,7 +7,7 @@ using cpp_socket::base::SocketWrapper;
 using cpp_socket::base::Address;
 using cpp_socket::base::address_family_t;
 
-namespace cpp_socket::transportlayer::tcp_socket {
+namespace cpp_socket::transportlayer {
 	class TcpSocket: public SocketWrapper {
 	public:
 		TcpSocket(address_family_t ip_protocol, std::string ip, int port, bool blocking)
@@ -183,6 +183,6 @@ namespace cpp_socket::transportlayer::tcp_socket {
 		unsigned int data_index_receive = 0;
 		unsigned char size_bytes_index_receive = 0; 
 	};
-} // namespace cpp_socket::tcp_socket
+} // namespace cpp_socket::transportlayer
 
 #endif // TCP_SOCKET_H
