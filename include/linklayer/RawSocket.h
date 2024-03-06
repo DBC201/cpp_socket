@@ -3,6 +3,10 @@
 
 #include <base/SocketWrapper.h>
 
+using cpp_socket::base::SocketWrapper;
+using cpp_socket::base::RAW_PACKET;
+using cpp_socket::base::Address;
+
 #ifdef _WIN32
 	#error "Windows not supported"
 #endif

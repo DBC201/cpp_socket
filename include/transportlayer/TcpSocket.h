@@ -3,6 +3,10 @@
 
 #include <base/SocketWrapper.h>
 
+using cpp_socket::base::SocketWrapper;
+using cpp_socket::base::Address;
+using cpp_socket::base::address_family_t;
+
 namespace cpp_socket::transportlayer::tcp_socket {
 	class TcpSocket: public SocketWrapper {
 	public:

@@ -55,7 +55,7 @@ int main() {
 				clients.push(clientSocket);
 			}
 			else if (r == -1) {
-				int err = cpp_socket::get_syscall_error();
+				int err = cpp_socket::base::get_syscall_error();
 				if (err == WOULDBLOCK_ERROR) {
 					std::unique_lock lock(m);
 					clients.push(clientSocket);
@@ -84,7 +84,7 @@ int main() {
 
 	} catch (std::runtime_error& e) {
 		std::cout << e.what() << std::endl;
-		std::cout << "Error code " << cpp_socket::get_syscall_error() << std::endl;
+		std::cout << "Error code " << cpp_socket::base::get_syscall_error() << std::endl;
 	}
 	
 	SocketWrapper::cleanup();
