@@ -2,7 +2,7 @@
 #include <iomanip>
 
 using cpp_socket::linklayer::RawSocket;
-using cpp_socket::linklayer::IP;
+using cpp_socket::linklayer::PROMISCIOUS;
 
 struct EthernetFrame {
 	unsigned char destination_mac[6];
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	RawSocket rawSocket(argv[1], IP, true);
+	RawSocket rawSocket(argv[1], PROMISCIOUS, true);
 	while (true) {
 		EthernetFrame ethernetFrame;
 		int r = rawSocket.receive_wrapper(reinterpret_cast<char*>(&ethernetFrame), sizeof(ethernetFrame), 0);

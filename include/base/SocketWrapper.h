@@ -125,7 +125,7 @@ namespace cpp_socket::base
 
 		#ifdef __unix__
 		static int set_nic(sockaddr_ll& nic, std::string interface, int protocol_filter) {
-			nic.sll_family = AF_PACKET;
+			nic.sll_family = RAW_PACKET;
 			nic.sll_protocol = htons(protocol_filter);
 			nic.sll_ifindex = if_nametoindex(interface.c_str());
 			return 1;
@@ -134,7 +134,9 @@ namespace cpp_socket::base
 
 		static int set_ipv4_address(sockaddr_in& ipv4, std::string ip, int port) {
 			ipv4.sin_family = IPV4;
-			ipv4.sin_port = htons(port);
+			if (port >= 0) {
+				ipv4.sin_port = htons(port);
+			}
 			if (ip.empty()) {
 				ipv4.sin_addr.s_addr = INADDR_ANY;
 				return 1;
@@ -144,7 +146,9 @@ namespace cpp_socket::base
 
 		static int set_ipv6_address(sockaddr_in6& ipv6, std::string ip, int port) {
 			ipv6.sin6_family = IPV6;
-			ipv6.sin6_port = htons(port);
+			if (port >= 0) {
+				ipv6.sin6_port = htons(port);
+			}
 			if (ip.empty()) {
 				ipv6.sin6_addr = in6addr_any;
 				return 1;
@@ -303,14 +307,6 @@ namespace cpp_socket::base
 
 		SOCKET_TYPE get_socket() {
 			return m_socket;
-		}
-
-		int sendto_wrapper(unsigned char* buf, int len, int flags, sockaddr* dest, socklen_t dest_len) {
-			return sendto(m_socket, buf, len, flags, dest, dest_len);
-		}
-
-		int recvfrom_wrapper(unsigned char* buf, int len, int flags, sockaddr* src, socklen_t src_len) {
-			return recvfrom(m_socket, buf, len, flags, src, &src_len);
 		}
 
 		int send_wrapper(const char *buf, int len, int flags) {
