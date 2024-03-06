@@ -299,6 +299,14 @@ namespace cpp_socket::base
 			return m_socket;
 		}
 
+		int sendto_wrapper(unsigned char* buf, int len, int flags, sockaddr* dest, socklen_t dest_len) {
+			return sendto(m_socket, buf, len, flags, dest, dest_len);
+		}
+
+		int recvfrom_wrapper(unsigned char* buf, int len, int flags, sockaddr* src, socklen_t src_len) {
+			return recvfrom(m_socket, buf, len, flags, src, &src_len);
+		}
+
 		int send_wrapper(const char *buf, int len, int flags) {
 			return send(m_socket, buf, len, flags);
 		}
