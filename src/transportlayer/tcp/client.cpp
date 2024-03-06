@@ -1,10 +1,11 @@
 #include <transportlayer/TcpSocket.h>
+#include <base/PollWrapper.h>
 #include <string>
 #include <thread>
 #include <random>
 
 using cpp_socket::transportlayer::TcpSocket;
-using cpp_socket::transportlayer::IPV4;
+using cpp_socket::base::IPV4;
 using cpp_socket::base::SocketWrapper;
 using cpp_socket::base::PollWrapper;
 
@@ -46,7 +47,7 @@ int main() {
 						std::cout << "Invalid package size." << std::endl;
 					}
 					else if (r == -1) {
-						int err = cpp_socket::get_syscall_error();
+						int err = cpp_socket::base::get_syscall_error();
 						if (err != WOULDBLOCK_ERROR) {
 							std::cout << "Error! Code: " << err << std::endl;
 							break;

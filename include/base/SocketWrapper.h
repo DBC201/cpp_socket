@@ -96,11 +96,17 @@ namespace cpp_socket::base
 					if (address.empty()) {
 						m_connect_status = 0;
 					}
+					else {
+						m_connect_status = 1;
+					}
 					break;
 				case IPV6:
 					r = set_ipv6_address(m_sockaddr.ipv6, address, filter);
 					if (address.empty()) {
 						m_connect_status = 0;
+					}
+					else {
+						m_connect_status = 1;
 					}
 					break;
 				#ifdef __unix__

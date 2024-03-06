@@ -8,7 +8,7 @@ include_directories(
 )
 
 add_executable(tcp_server src/transportlayer/tcp/server.cpp)
-add_executable(tcp_client src/transportlayer/tcp/server.cpp)
+add_executable(tcp_client src/transportlayer/tcp/client.cpp)
 
 if (UNIX)
 	add_executable(eth src/linklayer/eth.cpp)
