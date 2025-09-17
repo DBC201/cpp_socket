@@ -80,7 +80,6 @@ int main() {
             }
             if (nh->nlmsg_type != RTM_NEWLINK && nh->nlmsg_type != RTM_DELLINK) {
                 // Not a link event; ignore (you can subscribe to more groups and handle here)
-                std::cout << " adsiopfjs" << std::endl;
                 continue;
             }
 
