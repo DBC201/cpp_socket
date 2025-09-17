@@ -9,6 +9,6 @@ This class can be used to initiate a tcp connection between server and client ba
 See ```examples/transportlayer```.
 
 ## Link/Network Layer (Linux Only)
-This class is used to create raw IP or ethernet sockets.
+This class (RawSocket) is used to create raw IP or ethernet sockets.
 
 See ```examples/linklayer```.
