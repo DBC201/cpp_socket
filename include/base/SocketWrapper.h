@@ -36,6 +36,7 @@
 	#include <fcntl.h>
 	#include <errno.h>
 	#include <linux/rtnetlink.h>
+    #include <sys/un.h>
 	#define SOCKET_TYPE int
 	#define CLOSE_SOCKET close
 	#define POLLFD_TYPE pollfd
@@ -61,7 +62,8 @@ namespace cpp_socket::base
 		UNSPECIFIED = AF_UNSPEC,
 		#ifdef __unix__
 			RAW_PACKET = AF_PACKET,
-			NETLINK = AF_NETLINK
+			NETLINK = AF_NETLINK,
+            UNIX = AF_UNIX
 		#endif
 	};
 
@@ -93,6 +95,7 @@ namespace cpp_socket::base
 		/**
 		 * @brief Set the address for given address family
 		 * For netlink, address is unused since it is set to be assigned by the kernel
+         * For unix, filter sets abstraction. It will do bind by default.
 		 * 
 		 * @param address 
 		 * @param filter 
@@ -127,6 +130,11 @@ namespace cpp_socket::base
 					r = set_link_listener(m_sockaddr.netlink, filter);
 					m_connect_status = -1;
 					break;
+                case UNIX:
+                    sockaddr_size = set_unix(m_sockaddr.unix_sock, address, filter);
+                    m_connect_status = -1;
+                    r = 1;
+                    break;
 				#endif
 				default:
 					throw std::runtime_error("Unsupported address family.");
@@ -150,6 +158,32 @@ namespace cpp_socket::base
 			nl.nl_groups = nl_groups;
 			return 1;
 		}
+
+        /**
+         * @brief Set the unix object
+         * 
+         * @param un 
+         * @param name 
+         * @param abstract 
+         * @return int sock size which should be supplied to bind 
+         */
+        static socklen_t set_unix(sockaddr_un& un, const std::string& name, bool abstract) {
+            memset(&un, 0, sizeof(un));
+            un.sun_family = AF_UNIX;
+        
+            size_t n = name.size();
+            if (abstract) {
+                if (n > sizeof(un.sun_path) - 1) n = sizeof(un.sun_path) - 1;
+                un.sun_path[0] = '\0';
+                memcpy(un.sun_path + 1, name.data(), n);
+                return (socklen_t)(offsetof(sockaddr_un, sun_path) + 1 + n);
+            } else {
+                if (n > sizeof(un.sun_path) - 1) n = sizeof(un.sun_path) - 1;
+                memcpy(un.sun_path, name.data(), n);
+                un.sun_path[n] = '\0';
+                return (socklen_t)(offsetof(sockaddr_un, sun_path) + n + 1);
+            }
+        }
 		#endif
 
 		static int set_ipv4_address(sockaddr_in& ipv4, std::string ip, int port) {
@@ -181,6 +215,11 @@ namespace cpp_socket::base
 		}
 
 		socklen_t size() {
+            #ifdef __unix__
+            if (address_family == UNIX) {
+                return sockaddr_size;
+            }
+            #endif
 			return sizeof(m_sockaddr);
 		}
 
@@ -206,9 +245,11 @@ namespace cpp_socket::base
 			#ifdef __unix__
 			sockaddr_ll raw;
 			sockaddr_nl netlink;
+            sockaddr_un unix_sock;
 			#endif
 		} m_sockaddr;
 		int m_connect_status = -2;
+        int sockaddr_size = 0;
 	};
 
 	/*
@@ -330,6 +371,10 @@ namespace cpp_socket::base
 			return m_socket;
 		}
 
+        int sendto_wrapper(const char *buf, int len, int flags, sockaddr* addr, int addr_len){
+            return sendto(m_socket, buf, len, flags, addr, addr_len);
+        }
+
 		int send_wrapper(const char *buf, int len, int flags) {
 			return send(m_socket, buf, len, flags);
 		}
@@ -362,6 +407,7 @@ namespace cpp_socket::base
 		void m_bind() {
 			if (bind(m_socket, address.get_sockaddr(), address.size()) == -1)
 			{
+                fprintf(stderr, "bind failed: errno=%d (%s)\n", errno, strerror(errno));
 				throw std::runtime_error("Failed to bind.");
 			}
 		}
