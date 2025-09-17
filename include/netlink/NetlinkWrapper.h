@@ -13,7 +13,7 @@ namespace cpp_socket::netlink {
     };
 
     enum protocol_t {
-        ROUTE=NETLINK_ROUTE
+        ROUTE = NETLINK_ROUTE
     };
 
     class NetlinkWrapper: public SocketWrapper {
