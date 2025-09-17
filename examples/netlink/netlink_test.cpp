@@ -55,7 +55,7 @@ int main() {
 
 
     while (true) {
-        std::vector<char> buf(1  << 17); // 128 KiB
+        std::vector<char> buf(1 << 17); // 128 KiB
         int n = netlinkWrapper.receive_wrapper(buf.data(), buf.size(), 0);
 
         if (n < 0) {
