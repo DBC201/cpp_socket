@@ -12,5 +12,6 @@ add_executable(tcp_client examples/transportlayer/tcp/client.cpp)
 
 if (UNIX)
 	add_executable(eth examples/linklayer/eth.cpp)
+    add_executable(netlink examples/netlink/netlink_test.cpp)
 	target_link_libraries(tcp_server pthread)
 endif()

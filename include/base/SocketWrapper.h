@@ -35,6 +35,7 @@
 	#include <poll.h>
 	#include <fcntl.h>
 	#include <errno.h>
+	#include <linux/rtnetlink.h>
 	#define SOCKET_TYPE int
 	#define CLOSE_SOCKET close
 	#define POLLFD_TYPE pollfd
@@ -59,7 +60,8 @@ namespace cpp_socket::base
 		IPV6 = AF_INET6,
 		UNSPECIFIED = AF_UNSPEC,
 		#ifdef __unix__
-			RAW_PACKET = AF_PACKET
+			RAW_PACKET = AF_PACKET,
+			NETLINK = AF_NETLINK
 		#endif
 	};
 
@@ -88,6 +90,13 @@ namespace cpp_socket::base
 			}
 		}
 
+		/**
+		 * @brief Set the address for given address family
+		 * For netlink, address is unused since it is set to be assigned by the kernel
+		 * 
+		 * @param address 
+		 * @param filter 
+		 */
 		void set_address(std::string address, int filter) {
 			int r = 0;
 			switch (address_family) {
@@ -114,6 +123,10 @@ namespace cpp_socket::base
 					r = set_nic(m_sockaddr.raw, address, filter);
 					m_connect_status = -1;
 					break;
+				case NETLINK:
+					r = set_link_listener(m_sockaddr.netlink, filter);
+					m_connect_status = -1;
+					break;
 				#endif
 				default:
 					throw std::runtime_error("Unsupported address family.");
@@ -128,6 +141,13 @@ namespace cpp_socket::base
 			nic.sll_family = RAW_PACKET;
 			nic.sll_protocol = htons(protocol_filter);
 			nic.sll_ifindex = if_nametoindex(interface.c_str());
+			return 1;
+		}
+		
+		static int set_link_listener(sockaddr_nl& nl, unsigned int nl_groups) {
+			nl.nl_family = NETLINK;
+			nl.nl_pid = 0;
+			nl.nl_groups = nl_groups;
 			return 1;
 		}
 		#endif
@@ -185,6 +205,7 @@ namespace cpp_socket::base
 			sockaddr_in6 ipv6;
 			#ifdef __unix__
 			sockaddr_ll raw;
+			sockaddr_nl netlink;
 			#endif
 		} m_sockaddr;
 		int m_connect_status = -2;
