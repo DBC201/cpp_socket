@@ -14,7 +14,7 @@ namespace cpp_socket::unix_wrapper {
             :SocketWrapper(UNIX_FAM, SOCK_DGRAM, 0, createAddress(name, abstract), blocking) {
         }
 
-        Address* get_dest_sockaddr(std::string name, bool abstract) {
+        static Address* get_dest_sockaddr(std::string name, bool abstract) {
             Address* address = new Address(UNIX_FAM);
             address->set_address(name, abstract ? 1 : 0);
             return address;

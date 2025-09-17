@@ -9,7 +9,7 @@ int main() {
 
     std::string s = "hello world";
 
-    Address* addr = unixWrapper.get_dest_sockaddr("proca", true);
+    Address* addr = UnixWrapper::get_dest_sockaddr("proca", true);
 
     unixWrapper.sendto_wrapper(s.c_str(), s.size() + 1, 0, addr->get_sockaddr(), addr->size());
 
