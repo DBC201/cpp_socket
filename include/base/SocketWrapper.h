@@ -63,7 +63,7 @@ namespace cpp_socket::base
 		#ifdef __unix__
 			RAW_PACKET = AF_PACKET,
 			NETLINK = AF_NETLINK,
-            UNIX = AF_UNIX
+            UNIX_FAM = AF_UNIX
 		#endif
 	};
 
@@ -130,7 +130,7 @@ namespace cpp_socket::base
 					r = set_link_listener(m_sockaddr.netlink, filter);
 					m_connect_status = -1;
 					break;
-                case UNIX:
+                case UNIX_FAM:
                     sockaddr_size = set_unix(m_sockaddr.unix_sock, address, filter);
                     m_connect_status = -1;
                     r = 1;
@@ -169,7 +169,7 @@ namespace cpp_socket::base
          */
         static socklen_t set_unix(sockaddr_un& un, const std::string& name, bool abstract) {
             memset(&un, 0, sizeof(un));
-            un.sun_family = AF_UNIX;
+            un.sun_family = UNIX_FAM;
         
             size_t n = name.size();
             if (abstract) {
@@ -216,7 +216,7 @@ namespace cpp_socket::base
 
 		socklen_t size() {
             #ifdef __unix__
-            if (address_family == UNIX) {
+            if (address_family == UNIX_FAM) {
                 return sockaddr_size;
             }
             #endif
