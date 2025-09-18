@@ -1,5 +1,5 @@
-#ifndef NETLINK_WRAPPER_H
-#define NETLINK_WRAPPER_H
+#ifndef UNIX_WRAPPER_H
+#define UNIX_WRAPPER_H
 
 #include <base/SocketWrapper.h>
 
