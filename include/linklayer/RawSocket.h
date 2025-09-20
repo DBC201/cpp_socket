@@ -19,14 +19,19 @@ namespace cpp_socket::linklayer {
 
 	class RawSocket: public SocketWrapper {
 	public:
-		RawSocket(std::string nic, protocol_t filter, bool blocking) 
-			:SocketWrapper(RAW_PACKET, SOCK_RAW, filter, createAddress(nic, filter), blocking) {
+		RawSocket(std::string ifname, protocol_t filter, bool blocking) 
+			:SocketWrapper(RAW_PACKET, SOCK_RAW, filter, createAddress(ifname, filter), blocking), ifname(ifname) {
 
 		}
+
+        std::string get_ifname() {
+            return ifname;
+        }
 	private:
-		Address createAddress(std::string nic, protocol_t filter) {
+        std::string ifname;
+		Address createAddress(std::string ifname, protocol_t filter) {
 			Address address(RAW_PACKET);
-			address.set_address(nic, filter);
+			address.set_address(ifname, filter);
 			return address;
 		}
 	};

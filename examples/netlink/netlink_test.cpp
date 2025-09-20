@@ -92,6 +92,7 @@ int main() {
             char ifname[IF_NAMESIZE] = {0};
             unsigned char* mac = nullptr;
             int maclen = 0;
+            int mtu = 0;
 
             int attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(*ifi));
             for (rtattr* rta = (rtattr*)IFLA_RTA(ifi); RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
@@ -102,6 +103,9 @@ int main() {
                     case IFLA_ADDRESS:
                         mac = (unsigned char*)RTA_DATA(rta);
                         maclen = RTA_PAYLOAD(rta);
+                        break;
+                    case IFLA_MTU:
+                        mtu = *(int*)RTA_DATA(rta);
                         break;
                     default:
                         break;
@@ -115,6 +119,7 @@ int main() {
             if (ifname[0]) std::cout << " ifname=" << ifname;
             if (nh->nlmsg_type != RTM_DELLINK && mac) {
                 std::cout << " mac="; print_mac(mac);
+                std::cout << " mtu=" << mtu << std::endl;
             }
             std::cout << " flags=0x" << std::hex << ifflags << std::dec << "\n";
         }
