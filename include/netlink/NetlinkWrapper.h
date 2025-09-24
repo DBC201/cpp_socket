@@ -9,7 +9,8 @@ using cpp_socket::base::Address;
 
 namespace cpp_socket::netlink {
     enum listener_t {
-        LINK = RTMGRP_LINK
+        LINK = RTMGRP_LINK,
+        UNICAST = 0
     };
 
     enum protocol_t {
