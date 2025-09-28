@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
 	}
 
 	RawSocket rawSocket(argv[1], PROMISCIOUS, true);
+    rawSocket.set_ignore_outgoing(1);
 	while (true) {
 		EthernetFrame ethernetFrame;
 		int r = rawSocket.receive_wrapper(reinterpret_cast<char*>(&ethernetFrame), sizeof(ethernetFrame), 0);

@@ -371,6 +371,18 @@ namespace cpp_socket::base
 			return m_socket;
 		}
 
+        #ifdef __unix__
+        /**
+         * @brief Set to receive outgoing frames from a layer 2 socket
+         * 
+         * @param flag 0 or 1 (1 for not receiving outgoing packets)
+         * @return int 
+         */
+        int set_ignore_outgoing(int flag) {
+            return setsockopt(m_socket, SOL_PACKET, PACKET_IGNORE_OUTGOING, &flag, sizeof(flag));
+        }
+        #endif
+
         int sendto_wrapper(const char *buf, int len, int flags, sockaddr* addr, int addr_len){
             return sendto(m_socket, buf, len, flags, addr, addr_len);
         }
